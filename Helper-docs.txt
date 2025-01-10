@@ -1,0 +1,83 @@
+Files that require attention:
+1. controllers/users.js
+2. middleware.js
+3. In seeds/index.js author should be equal to '675be0049e8bef59be762f18'
+4. As the clusters were not being displayed on clustermap, 
+    I have commented out the line "map.addControl(new mapboxgl.NavigationControl());"
+    in public/javascripts/clusterMap.ejs file.
+
+Passport- https://www.passportjs.org/ - for authentication
+1. We have used passport-local //theme
+2. Uses PBKB2 hashing function -this function is platform independent
+3. Authentication looks like :
+    /register - to submit a form
+    POST request to /register - to create a user
+4. Files Edited for MapTiler:
+    controllers/campgrounds.js
+    models/campgrounds.js
+    views/layouts/boilerplate.ejs
+    views/campgrounds/show.ejs
+    public/javascripts/showPageMap.js
+    views/campgrounds/index.ejs
+    public/javascripts/clusterMap.js
+
+Section-53:
+Controller(of MVC)
+
+******************************************************
+Edited controllers/users.js code:
+
+module.exports.logout = (req, res, next) => {
+    req.logout(function (err) {
+        if (err) {
+            return next(err);
+        }
+        req.flash('success', 'Goodbye!');
+        res.redirect('/campgrounds');
+    });
+}
+******************************************************
+
+----------------------------------------------------------------------
+
+******************************************************
+Edited middleware.js code:
+
+module.exports.storeReturnTo = (req, res, next) => {
+    if (req.session.returnTo) {
+        res.locals.returnTo = req.session.returnTo;
+    }
+    next();
+}
+
+module.exports.isLoggedIn = (req, res, next) => {
+    if (!req.isAuthenticated()) {
+        req.session.returnTo = req.originalUrl; // add this line
+        req.flash('error', 'You must be signed in first!');
+        return res.redirect('/login');
+    }
+    next();
+}
+******************************************************
+
+----------------------------------------------------------------------
+
+******************************************************
+Edited routes/users.js code:
+
+//  at the top of the routes/users.js code, add this line to import the storeReturnTo function from the middleware.js file
+const { storeReturnTo } = require('../middleware');
+
+router.post('/login',
+    // use the storeReturnTo middleware to save the returnTo value from session to res.locals
+    storeReturnTo,
+    // passport.authenticate logs the user in and clears req.session
+    passport.authenticate('local', {failureFlash: true, failureRedirect: '/login'}),
+    // Now we can use res.locals.returnTo to redirect the user after login
+    (req, res) => {
+        req.flash('success', 'Welcome back!');
+        const redirectUrl = res.locals.returnTo || '/campgrounds'; // update this line to use res.locals.returnTo now
+        res.redirect(redirectUrl);
+    });
+
+******************************************************
